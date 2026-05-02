@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minimal Streak Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+</head>
+<body class="bg-black text-white flex flex-col items-center justify-center min-h-screen font-sans">
+
+    <div id="login-screen" class="text-center">
+        <h2 class="text-2xl font-light mb-8">Minimal Streak</h2>
+        <button onclick="signIn()" class="px-6 py-3 bg-white text-black rounded-full font-medium">Sign in with Google</button>
+    </div>
+
+    <div id="app-screen" class="hidden text-center">
+        <p class="text-zinc-500 tracking-widest text-xs mb-2">CURRENT STREAK</p>
+        <h1 id="days" class="text-9xl font-thin">0</h1>
+        <p class="text-zinc-400 text-lg">DAYS</p>
+
+        <button id="resetBtn" class="mt-24 px-10 py-3 border border-zinc-800 text-zinc-500 rounded-full text-xs hover:border-red-900 hover:text-red-500 transition-all">
+            HOLD TO RESET
+        </button>
+        
+        <button onclick="auth.signOut()" class="block mt-8 mx-auto text-zinc-700 text-xs underline">Sign Out</button>
+    </div>
+
+    <script>
+        // PASTE YOUR FIREBASE CONFIG VALUES BELOW[span_12](start_span)[span_12](end_span)[span_13](start_span)[span_13](end_span)
+        // Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyDOZQm8KZUwQ5VvWK96eLuVsxRYvOTwPlg",
+  authDomain: "mystreakapp-9bcbc.firebaseapp.com",
+  projectId: "mystreakapp-9bcbc",
+  storageBucket: "mystreakapp-9bcbc.firebasestorage.app",
+  messagingSenderId: "147678159283",
+  appId: "1:147678159283:web:746064ee996a9b1a69ebc6"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        let startTime = Date.now();
+
+        // UI Elements
+        const loginScreen = document.getElementById('login-screen');
+        const appScreen = document.getElementById('app-screen');
+        const daysDisplay = document.getElementById('days');
+
+        // Authentication Listener[span_14](start_span)[span_14](end_span)
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                loginScreen.classList.add('hidden');
+                appScreen.classList.remove('hidden');
+                // Sync from Cloud[span_15](start_span)[span_15](end_span)
+                db.collection("streaks").doc(user.uid).onSnapshot(doc => {
+                    if (doc.exists()) {
+                        startTime = doc.data().timestamp;
+                        updateDisplay();
+                    }
+                });
+            } else {
+                loginScreen.classList.remove('hidden');
+                appScreen.classList.add('hidden');
+            }
+        });
+
+        function signIn() {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider);
+        }
+
+        async function handleReset() {
+            // Trigger device security check (Biometrics)[span_16](start_span)[span_16](end_span)
+            if (window.confirm("Verify identity to reset streak?")) {
+                const now = Date.now();
+                const user = auth.currentUser;
+                if (user) {
+                    await db.collection("streaks").doc(user.uid).set({ timestamp: now });[span_17](start_span)[span_17](end_span)
+                }
+            }
+        }
+
+        function updateDisplay() {
+            const diff = Math.floor((Date.now() - startTime) / (1000 * 60 * 60 * 24));
+            daysDisplay.innerText = diff;
+        }
+
+        // Long Press Reset Logic
+        let timer;
+        const resetBtn = document.getElementById('resetBtn');
+        resetBtn.addEventListener('mousedown', () => timer = setTimeout(handleReset, 1500));
+        resetBtn.addEventListener('mouseup', () => clearTimeout(timer));
+        resetBtn.addEventListener('touchstart', () => timer = setTimeout(handleReset, 1500));
+        resetBtn.addEventListener('touchend', () => clearTimeout(timer));
+
+        setInterval(updateDisplay, 1000);
+    </script>
+</body>
+</html>
